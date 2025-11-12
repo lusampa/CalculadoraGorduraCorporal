@@ -1,0 +1,9 @@
+Duvidas a respeito do CODIGO DO KOTLIN
+
+1. O que é o indices = [Index("pacienteId")], onDelete = ForeignKey.CASCADE
+
+2.@Insert(onConflict = OnConflictStrategy.REPLACE)
+
+3. O que é a suspend fun, pra que serve
+
+4. O que é vararg
