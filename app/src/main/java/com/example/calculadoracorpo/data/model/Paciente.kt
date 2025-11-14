@@ -18,7 +18,7 @@ enum class Sexo {
 @Entity(tableName = "pacientes")
 data class Paciente(
     // 1. Dados pessoais do paciente
-    @PrimaryKey val id: Int,
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val nome: String,
     val dataDeNascimento: LocalDate?,
     val sexo: Sexo,

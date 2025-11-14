@@ -1,93 +1,127 @@
 package com.example.calculadoracorpo.navigation
 
+import com.example.calculadoracorpo.features.avaliacoesgeral.HistoricoGeralAvaliacoesScreen
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+// IMPORTAÇÃO CORRIGIDA PARA O ARROWBACK NÃO DEPRECIADO
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Straighten
-import androidx.compose.material.icons.outlined.Plagiarism
 import androidx.compose.material3.*
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.savedstate.SavedStateRegistryOwner
+import com.example.calculadoracorpo.MainApplication
 import com.example.calculadoracorpo.features.TelaHome
+import com.example.calculadoracorpo.features.avaliacoes.AvaliacoesScreen
+import com.example.calculadoracorpo.features.avaliacoes.AvaliacoesViewModelFactory
 import com.example.calculadoracorpo.features.cadastropaciente.CadastroPacienteScreen
 import com.example.calculadoracorpo.features.listapacientes.ListaPacienteScreen
+import com.example.calculadoracorpo.features.medidas.MedidasScreen
+import com.example.calculadoracorpo.features.medidas.MedidasViewModelFactory
+// IMPORTAÇÃO NECESSÁRIA PARA O NOVO ARGUMENTO
+import com.example.calculadoracorpo.data.repository.PdfGenerator
 
-// --- 1. Definição das Rotas ---
 object AppRoutes {
+    // Rotas Principais (para o BottomBar)
     const val HOME = "home"
-    const val PACIENTES = "pacientes"
-    const val AVALIACOES = "avaliacoes"
-    const val MEDIDAS = "medidas"
-    const val CADASTRO_PACIENTE = "cadastro_paciente"
+    const val LISTA_PACIENTES = "listaPacientes"
+    const val AVALIACOES = "avaliacoes" // Rota para histórico geral
 
-    const val EDITAR_PACIENTE = "editar_paciente/{pacienteId}"
+    // Rotas Secundárias (sem BottomBar)
+    const val CADASTRO_PACIENTE = "cadastroPaciente"
 
-    fun rotaParaEditar(pacienteId: Int): String {
-        return "editar_paciente/$pacienteId"
-    }
+    // Rotas com Argumentos
+    // Detalhes da Avaliação (Histórico)
+    const val ARG_PACIENTE_ID = "pacienteId"
+    const val DETALHE_AVALIACOES = "detalheAvaliacoes/{$ARG_PACIENTE_ID}"
+    fun detalheAvaliacoes(pacienteId: Int) = "detalheAvaliacoes/$pacienteId"
+
+    // Entrada de Medidas (Formulário)
+    const val ENTRADA_MEDIDAS = "entradaMedidas/{$ARG_PACIENTE_ID}"
+    fun entradaMedidas(pacienteId: Int) = "entradaMedidas/$pacienteId"
 }
 
-// --- 2. Itens do Menu
 data class BottomNavItem(
     val label: String,
     val icon: ImageVector,
     val route: String
 )
 
-val bottomNavItems = listOf(
-    BottomNavItem("HOME", Icons.Default.Home, AppRoutes.HOME),
-    BottomNavItem("PACIENTES", Icons.Default.Person, AppRoutes.PACIENTES),
-    BottomNavItem("AVALIAÇÕES", Icons.Outlined.Plagiarism, AppRoutes.AVALIACOES),
-    BottomNavItem("MEDIDAS", Icons.Default.Straighten, AppRoutes.MEDIDAS)
-)
+// --- NOVO: Composable Placeholder para o Histórico Geral ---
+@Composable
+fun HistoricoGeralAvaliacoesScreen(
+    onAvaliacaoClick: (pacienteId: Int) -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        // **TODO:** Implementar ViewModel e LazyColumn para listar TODAS as avaliações
+        Text(
+            text = "Esta é a tela de Histórico Geral de Avaliações (de todos os pacientes).",
+            color = Color.White
+        )
+    }
+}
+// -----------------------------------------------------------
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavHost() {
     val navController = rememberNavController()
-    Scaffold(
-        bottomBar = {
-            val navBackStackEntry by navController.currentBackStackEntryAsState()
-            val currentRoute = navBackStackEntry?.destination?.route
+    // Acesso ao Repositório do MainApplication
+    val context = LocalContext.current
+    val application = context.applicationContext as MainApplication
+    val repository = application.repository
 
-            if (currentRoute != AppRoutes.CADASTRO_PACIENTE && currentRoute != AppRoutes.EDITAR_PACIENTE) {
-                AppBottomBar(navController = navController, items = bottomNavItems)
-            }
-        }
+    // INSTANCIA O PDF GENERATOR UMA VEZ
+    val pdfGenerator = remember { PdfGenerator(context) }
+
+    val bottomNavItems = listOf(
+        BottomNavItem("Início", Icons.Default.Home, AppRoutes.HOME),
+        BottomNavItem("Pacientes", Icons.Default.Person, AppRoutes.LISTA_PACIENTES),
+        BottomNavItem("Avaliações", Icons.Default.Straighten, AppRoutes.AVALIACOES),
+    )
+
+    Scaffold(
+        bottomBar = { AppBottomBar(navController, bottomNavItems) }
     ) { paddingValues ->
         NavHost(
             navController = navController,
             startDestination = AppRoutes.HOME,
             modifier = Modifier.padding(paddingValues)
         ) {
-            // Rota 1: Home
+            // Rota 1: Início
             composable(AppRoutes.HOME) {
                 TelaHome()
             }
 
             // Rota 2: Lista de Pacientes
-            composable(AppRoutes.PACIENTES) {
+            composable(AppRoutes.LISTA_PACIENTES) {
                 ListaPacienteScreen(
                     onPacienteClick = { pacienteId ->
-                        // TODO: navController.navigate("detalhes/$pacienteId")
+                        navController.navigate(AppRoutes.detalheAvaliacoes(pacienteId))
                     },
-                    onAddPacienteClick = {
-                        navController.navigate(AppRoutes.CADASTRO_PACIENTE)
-                    },
-                    onEditarPacienteClick = { pacienteId ->
-
-                        navController.navigate(AppRoutes.rotaParaEditar(pacienteId))
+                    onAddPacienteClick = { navController.navigate(AppRoutes.CADASTRO_PACIENTE) },
+                    onEditarPacienteClick = { /* TODO: Implementar edição */ },
+                    onAdicionarMedidasClick = { pacienteId ->
+                        navController.navigate(AppRoutes.entradaMedidas(pacienteId))
                     }
                 )
             }
@@ -95,50 +129,67 @@ fun AppNavHost() {
             // Rota 3: Cadastro de Paciente
             composable(AppRoutes.CADASTRO_PACIENTE) {
                 CadastroPacienteScreen(
-                    onPacienteSalvo = {
-                        navController.popBackStack() // Volta para a tela anterior
-                    },
-                    onVoltarClick = {
-                        navController.popBackStack() // Volta para a tela anterior
-                    }
-                )
-            }
-
-            //Rota 4: Edição de Paciente
-            composable(
-                route = AppRoutes.EDITAR_PACIENTE,
-                arguments = listOf(navArgument("pacienteId") { type = NavType.IntType })
-            ) { backStackEntry ->
-                // Pega o ID da rota
-                val pacienteId = backStackEntry.arguments?.getInt("pacienteId")
-
-                // TODO: Você precisará criar uma 'EditarPacienteScreen'
-                // que recebe o 'pacienteId', busca os dados no VM e preenche
-
-                CadastroPacienteScreen(
                     onPacienteSalvo = { navController.popBackStack() },
                     onVoltarClick = { navController.popBackStack() }
                 )
             }
 
-
-            // Rota 5: Avaliações (Placeholder)
+            // Rota 4: Avaliações Geral (Configurada para Histórico Geral)
             composable(AppRoutes.AVALIACOES) {
-                // TODO: TelaAvaliacoesPlaceHolder()
-                TelaHome()
+                HistoricoGeralAvaliacoesScreen(
+                    onAvaliacaoClick = { pacienteId ->
+                        // Permite clicar em uma avaliação para ir para o histórico individual
+                        navController.navigate(AppRoutes.detalheAvaliacoes(pacienteId))
+                    }
+                )
             }
 
-            // Rota 6: Medidas (Placeholder)
-            composable(AppRoutes.MEDIDAS) {
-                // TODO: TelaMedidasPlaceHolder()
+            // Rota 5: Detalhes das Avaliações (Histórico e Resultado)
+            composable(
+                route = AppRoutes.DETALHE_AVALIACOES,
+                arguments = listOf(navArgument(AppRoutes.ARG_PACIENTE_ID) { type = NavType.IntType })
+            ) { backStackEntry ->
+                val pacienteId = backStackEntry.arguments?.getInt(AppRoutes.ARG_PACIENTE_ID) ?: -1
 
-                TelaHome()
+                // Obtendo o Owner DENTRO do bloco composable
+                val owner = LocalContext.current as SavedStateRegistryOwner
+
+                // AGORA PASSAMOS O pdfGenerator PARA A FACTORY
+                val factory = AvaliacoesViewModelFactory(repository, owner, pacienteId, pdfGenerator)
+
+                AvaliacoesScreen(
+                    pacienteId = pacienteId,
+                    onNavigateBack = { navController.popBackStack() },
+                    onAddMedidaClick = { id ->
+                        navController.navigate(AppRoutes.entradaMedidas(id))
+                    }
+                )
             }
 
+            // Rota 6: Entrada de Medidas (Formulário)
+            composable(
+                route = AppRoutes.ENTRADA_MEDIDAS,
+                arguments = listOf(navArgument(AppRoutes.ARG_PACIENTE_ID) { type = NavType.IntType })
+            ) { backStackEntry ->
+                val pacienteId = backStackEntry.arguments?.getInt(AppRoutes.ARG_PACIENTE_ID) ?: -1
 
+                // Obtendo o Owner DENTRO do bloco composable
+                val owner = LocalContext.current as SavedStateRegistryOwner
+
+                val factory = MedidasViewModelFactory(repository, owner, pacienteId)
+
+                MedidasScreen(
+                    pacienteId = pacienteId,
+                    onMedidasSalvas = {
+                        // Após salvar, volta para a tela de detalhes do paciente
+                        navController.popBackStack()
+                    }
+                )
+            }
         }
     }
 }
+
 
 @Composable
 fun AppBottomBar(
@@ -149,19 +200,21 @@ fun AppBottomBar(
         containerColor = Color.Black.copy(alpha = 0.9f)
     ) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentRoute = navBackStackEntry?.destination?.route
+        // Pega a rota da aba selecionada (sem argumentos)
+        val currentRoute = navBackStackEntry?.destination?.route?.substringBefore("/")
 
         items.forEach { item ->
-            val isSelected = currentRoute == item.route
+            val isSelected = currentRoute == item.route.substringBefore("/")
             NavigationBarItem(
                 selected = isSelected,
                 onClick = {
                     navController.navigate(item.route) {
-                        launchSingleTop = true
-                        restoreState = true
+                        // Limpa o estado e volta para o topo da rota selecionada
                         popUpTo(navController.graph.startDestinationId) {
                             saveState = true
                         }
+                        launchSingleTop = true
+                        restoreState = true
                     }
                 },
                 label = { Text(item.label, fontSize = 11.sp) },
@@ -172,7 +225,7 @@ fun AppBottomBar(
                     unselectedIconColor = Color.White.copy(alpha = 0.6f),
                     unselectedTextColor = Color.White.copy(alpha = 0.6f),
 
-                )
+                    )
             )
         }
     }

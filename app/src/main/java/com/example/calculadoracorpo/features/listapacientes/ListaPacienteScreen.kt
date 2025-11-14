@@ -1,4 +1,5 @@
 package com.example.calculadoracorpo.features.listapacientes
+
 import com.example.calculadoracorpo.MainApplication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +24,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
@@ -46,17 +48,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.room.Room // Importação para 'Room'
-import com.example.calculadoracorpo.data.local.AppDatabase // Importação do seu DB
 import com.example.calculadoracorpo.data.model.Paciente
-import com.example.calculadoracorpo.data.repository.PacienteRepository // Importação do Repository
 import com.example.calculadoracorpo.ui.theme.components.FundoPadrao
 
 @Composable
 fun ListaPacienteScreen(
-    onPacienteClick: (pacienteId: Int) -> Unit,
-    onAddPacienteClick: () -> Unit,
-    onEditarPacienteClick: (pacienteId: Int) -> Unit
+    onPacienteClick: (pacienteId: Int) -> Unit, // Navega para Histórico/Detalhes
+    onAddPacienteClick: () -> Unit, // FAB: Cadastro de Novo Paciente
+    onEditarPacienteClick: (pacienteId: Int) -> Unit,
+    onAdicionarMedidasClick: (pacienteId: Int) -> Unit // NOVO: Navega para a entrada de medidas
 ){
 
     val context = LocalContext.current.applicationContext
@@ -115,7 +115,8 @@ fun ListaPacienteScreen(
                                 paciente = paciente,
                                 onPacienteClick = { onPacienteClick( paciente.id) },
                                 onEditarClick = {onEditarPacienteClick(paciente.id) },
-                                onExcluirClick = { viewModel.onExcluirPaciente(paciente)}
+                                onExcluirClick = { viewModel.onExcluirPaciente(paciente)},
+                                onAdicionarMedidasClick = { onAdicionarMedidasClick(paciente.id) } // NOVO CALLBACK
                             )
                         }
                     }
@@ -131,26 +132,24 @@ fun ItemPaciente(
     onPacienteClick: () -> Unit,
     onEditarClick: () -> Unit,
     onExcluirClick: () -> Unit, // Recebe o evento do ViewModel
+    onAdicionarMedidasClick: () -> Unit, // NOVO PARAMETRO
     modifier: Modifier = Modifier
 ) {
     // --- 1. Variáveis de estado para controlar o menu e o diálogo ---
-
     var menuAberto by remember { mutableStateOf(false) }
     var mostrarDialogoExcluir by remember { mutableStateOf(false) }
-    val density = LocalDensity.current
 
     // --- 2. O Card clicável ---
     Card(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clickable { onPacienteClick() },
+            .clickable { onPacienteClick() }, // Clique principal vai para Detalhes/Histórico
         colors = CardDefaults.cardColors(
             containerColor = Color.White.copy(alpha = 0.2f)
         )
     ) {
         Row(
-
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
@@ -189,19 +188,33 @@ fun ItemPaciente(
                     onDismissRequest = { menuAberto = false },
                     offset = DpOffset(x = 16.dp, y = 0.dp)
                 ) {
-                    // Opção 1: Editar
+                    // Opção 1: Adicionar Medidas (NOVO)
+                    DropdownMenuItem(
+                        text = { Text("Adicionar Medidas") },
+                        onClick = {
+                            menuAberto = false
+                            onAdicionarMedidasClick()
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Default.Add, "Adicionar Medidas")
+                        }
+                    )
+
+                    Divider() // Divisor para separar ações de dados pessoais
+
+                    // Opção 2: Editar Dados (Mantida)
                     DropdownMenuItem(
                         text = { Text("Editar Dados") },
                         onClick = {
                             menuAberto = false
-                            onEditarClick() // Chama o evento de navegação para edição
+                            onEditarClick()
                         },
                         leadingIcon = {
                             Icon(Icons.Default.Edit, "Editar")
                         }
                     )
 
-                    // Opção 2: Excluir
+                    // Opção 3: Excluir (Mantida)
                     DropdownMenuItem(
                         text = { Text("Excluir Paciente") },
                         onClick = {

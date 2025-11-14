@@ -12,7 +12,7 @@ import com.example.calculadoracorpo.data.model.Paciente
 
 
 
-@Database(entities = [Paciente::class , Medidas::class] ,version =1)
+@Database(entities = [Paciente::class , Medidas::class] ,version =4)
 @TypeConverters(Converters::class)
     abstract class AppDatabase: RoomDatabase(){
 

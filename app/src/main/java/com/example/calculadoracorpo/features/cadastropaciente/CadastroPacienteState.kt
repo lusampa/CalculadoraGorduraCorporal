@@ -7,7 +7,7 @@ data class CadastroPacienteState (
     val nome: String = "",
     val dataNascimento: LocalDate? = null,
     val sexo: Sexo = Sexo.MASCULINO,
-    val altura: String = "", // <-- NOVO
+    val altura: String = "",
     val peso: String = "",
 
     // UI

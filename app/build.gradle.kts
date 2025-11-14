@@ -1,12 +1,12 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose) // Plugin do Compose
-    alias(libs.plugins.kotlin.kapt)    // Plugin do KAPT (para o Room)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.kapt)
 }
 
 android {
-    namespace = "com.example.calculadoracorpo" // Verifique se este é seu namespace
+    namespace = "com.example.calculadoracorpo"
     compileSdk = 36
 
     defaultConfig {
@@ -41,9 +41,7 @@ android {
     buildFeatures {
         compose = true
     }
-    // ESTE BLOCO É CRUCIAL PARA CORRIGIR O ERRO 'invoke'
     composeOptions {
-        // Esta versão do compilador é a que "entende" o Kotlin 2.0.0
         kotlinCompilerExtensionVersion = "1.5.14"
     }
     packaging {
@@ -51,7 +49,7 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
-    buildToolsVersion = "34.0.0"
+    buildToolsVersion = "35.0.0"
 }
 
 dependencies {
@@ -72,7 +70,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
 
-    // Room (Corrigido)
+    // Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.material3)
