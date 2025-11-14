@@ -1,4 +1,4 @@
-package com.seunome.gorduracorporal.data.repository // ou .domain
+package com.example.calculadoracorpo.data.repository
 
 import com.example.calculadoracorpo.data.model.Medidas
 import com.example.calculadoracorpo.data.model.Paciente
@@ -12,25 +12,38 @@ import com.example.calculadoracorpo.data.model.Sexo
  * Retorna null se os dados forem insuficientes.
  */
 class CalculadoraGorduraCorporal {
-
+    // ... (restante do código da classe CalculadoraGorduraCorporal)
     fun calcularGordura(avaliacao: Medidas?, paciente: Paciente?): Double? {
         if (avaliacao == null || paciente == null) return null
 
         // --- PASSO 1: Obter a Soma das Dobras ---
-        // (Como você já tinha feito)
         val somaDobras: Double? = when (avaliacao.protocoloUsado) {
             Protocolo.PROTOCOLO_3_DOBRAS -> {
                 when (paciente.sexo) {
-                    Sexo.MASCULINO -> somar(avaliacao.peitoral, avaliacao.abdominal, avaliacao.coxa)
-                    Sexo.FEMININO -> somar(avaliacao.triceps, avaliacao.supraIliaca, avaliacao.coxa)
+                    // CORRIGIDO: Usando os novos nomes de campos da Medidas (dobraPeitoral, dobraAbdominal, dobraCoxa)
+                    Sexo.MASCULINO -> somar(
+                        avaliacao.dobraPeitoral,
+                        avaliacao.dobraAbdominal,
+                        avaliacao.dobraCoxa
+                    )
+                    Sexo.FEMININO -> somar(
+                        avaliacao.dobraTriciptal,
+                        avaliacao.dobraSupraIliaca,
+                        avaliacao.dobraCoxa
+                    )
                 }
             }
 
             Protocolo.PROTOCOLO_7_DOBRAS -> {
+                // CORRIGIDO: Usando os novos nomes de campos da Medidas (dobraXxx)
                 somar(
-                    avaliacao.peitoral, avaliacao.abdominal, avaliacao.triceps,
-                    avaliacao.supraIliaca, avaliacao.coxa, avaliacao.subescapular,
-                    avaliacao.axilarMedia
+                    avaliacao.dobraPeitoral,
+                    avaliacao.dobraAbdominal,
+                    avaliacao.dobraTriciptal,
+                    avaliacao.dobraSupraIliaca,
+                    avaliacao.dobraCoxa,
+                    avaliacao.dobraSubescapular,
+                    avaliacao.dobraAxilarMedia
                 )
             }
 
@@ -39,10 +52,7 @@ class CalculadoraGorduraCorporal {
         if (somaDobras == null) return null
 
         // --- PASSO 2: Aplicar a Fórmula de Densidade Correta ---
-
-        // As fórmulas usam a idade como Double
         val idade = paciente.idade.toDouble()
-        // E também usam a soma das dobras ao quadrado
         val somaDobrasQuadrado = somaDobras * somaDobras
 
         val densidade: Double? = when (avaliacao.protocoloUsado) {
@@ -71,24 +81,15 @@ class CalculadoraGorduraCorporal {
         }
 
         // --- PASSO 3: Converter Densidade em Percentual (Fórmula de Siri) ---
-        // Verificação de segurança: densidade não pode ser nula, zero ou negativa.
         if (densidade == null || densidade <= 0) return null
 
-        // Fórmula de Siri
         val percentual = (495 / densidade) - 450
 
         return percentual
     }
-/**
-     * Função auxiliarpara somar valores de dobras cutâneas
-     * que podem ser nulos (Double?).
-     * 'vararg' permite que a função aceite um número variável de argumentos
-     * (ex: somar(a), somar(a, b), somar(a, b, c), etc.)
- */
+
     private fun somar(vararg dobras: Double?): Double? {
-    //'any' percorre a lista e 'it == null' é a condição.
         if (dobras.any { it == null }) {
-        // 2. Se qualquer dobra for nula, o cálculo é impossível.
             return null
         }
         return dobras.filterNotNull().sum()

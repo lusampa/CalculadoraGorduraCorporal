@@ -9,8 +9,8 @@ import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
 class PacienteRepository(
-private val pacienteDao: PacienteDao,
-private val  medidasDao: MedidasDao
+    private val pacienteDao: PacienteDao,
+    private val  medidasDao: MedidasDao
 ) {
     // CRUD Do paciente
     suspend fun inserirPaciente(paciente: Paciente) = pacienteDao.inserir(paciente)
@@ -33,7 +33,11 @@ private val  medidasDao: MedidasDao
         return medidasDao.buscarUltimaAvaliacao(pacienteId)
     }
 
-    suspend fun buscarAvaliacaoAnterior(pacienteId: String, dataAtual: LocalDate): Medidas? {
+    suspend fun buscarAvaliacaoAnterior(pacienteId: Int, dataAtual: LocalDate): Medidas? {
         return medidasDao.buscarAvaliacaoAnterior(pacienteId, dataAtual)
+    }
+
+    fun listarTodasAvaliacoes(): Flow<List<Medidas>> {
+        return medidasDao.buscarTodasAvaliacoes()
     }
 }
