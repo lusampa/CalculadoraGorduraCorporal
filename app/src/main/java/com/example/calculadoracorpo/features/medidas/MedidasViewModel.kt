@@ -143,7 +143,7 @@ class MedidasViewModel(
                 circunferenciaAbdomen = estado.circunferenciaAbdomen.toDoubleOrNull(),
                 circunferenciaQuadril = estado.circunferenciaQuadril.toDoubleOrNull(),
                 circunferenciaCoxa = estado.circunferenciaCoxa.toDoubleOrNull(),
-                circunferenciaPanturrilha = estado.circunferenciaPanturilha.toDoubleOrNull()
+                circunferenciaPanturrilha = estado.circunferenciaPanturrilha.toDoubleOrNull()
             )
 
             try {

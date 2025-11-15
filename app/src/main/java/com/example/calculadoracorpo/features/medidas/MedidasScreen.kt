@@ -1,6 +1,5 @@
 package com.example.calculadoracorpo.features.medidas
 
-import androidx.compose.material3.ExposedDropdownMenuDefaults.AnchorType
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.remember
 import androidx.compose.foundation.clickable
@@ -202,7 +201,7 @@ fun ProtocoloDropdown(
                 // CORRIGIDO: Depreciação de menuAnchor
                 modifier = Modifier
                     .fillMaxWidth()
-                    .menuAnchor(ExposedDropdownMenuDefaults.AnchorType.PrimaryFilled, enabled = true),
+                    .menuAnchor(),
                 shape = RoundedCornerShape(8.dp),
                 colors = TextFieldDefaults.colors(
                     disabledTextColor = Color.Black.copy(alpha = 0.6f),
