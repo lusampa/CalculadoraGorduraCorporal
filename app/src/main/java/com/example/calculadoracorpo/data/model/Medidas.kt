@@ -24,8 +24,6 @@ data class Medidas (
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val pacienteId: Int,
     val dataAvaliacao: LocalDate,
-
-    val altura: Double?,
     val peso: Double?,
     val protocoloUsado: Protocolo,
 
@@ -45,15 +43,4 @@ data class Medidas (
     val circunferenciaQuadril: Double?,
     val circunferenciaCoxa: Double?,
     val circunferenciaPanturrilha: Double?
-) {
-    val imc: Double?
-        get() {
-            val alturaMetros = altura?.div(100.0)
-            val pesoKg = peso
-            return if (pesoKg != null && alturaMetros != null && alturaMetros > 0) {
-                pesoKg / (alturaMetros * alturaMetros)
-            } else {
-                null
-            }
-        }
-}
+)

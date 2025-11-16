@@ -2,7 +2,6 @@ package com.example.calculadoracorpo.features.cadastropaciente
 
 import android.app.DatePickerDialog
 import android.widget.DatePicker
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,7 +22,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.calculadoracorpo.MainApplication
 import com.example.calculadoracorpo.data.model.Sexo
-import com.example.calculadoracorpo.data.model.Paciente
 import com.example.calculadoracorpo.ui.theme.components.FundoPadrao
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -174,7 +172,6 @@ fun CadastroPacienteScreen(
             // --- Altura e Peso ---
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Altura em cm:", color = corLabel, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text("Peso:", color = corLabel, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 60.dp))
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -182,20 +179,6 @@ fun CadastroPacienteScreen(
                     value = uiState.altura,
                     onValueChange = viewModel::onAlturaChanged,
                     placeholder = { Text("Informe a altura") },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = corCampoFundo, unfocusedContainerColor = corCampoFundo,
-                        focusedTextColor = corCampoTexto, unfocusedTextColor = corCampoTexto,
-                        focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent
-                    )
-                )
-                TextField(
-                    value = uiState.peso,
-                    onValueChange = viewModel::onPesoChanged,
-                    placeholder = { Text("Informe o peso") },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(8.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),

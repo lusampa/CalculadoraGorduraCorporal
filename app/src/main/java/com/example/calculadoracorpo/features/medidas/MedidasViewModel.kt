@@ -122,7 +122,6 @@ class MedidasViewModel(
                 id = 0,
                 pacienteId = estado.pacienteId,
                 dataAvaliacao = estado.dataAvaliacao,
-                altura = estado.altura.toDoubleOrNull(),
                 peso = estado.peso.toDoubleOrNull(),
                 protocoloUsado = estado.protocoloSelecionado,
 

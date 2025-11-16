@@ -8,6 +8,7 @@ import com.example.calculadoracorpo.data.model.Sexo
 import com.example.calculadoracorpo.data.repository.CalculadoraGorduraCorporal
 import com.example.calculadoracorpo.data.repository.PacienteRepository
 import com.example.calculadoracorpo.features.avaliacoes.AvaliacaoResultado
+import com.example.calculadoracorpo.ui.theme.CalculadoracorpoTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -88,7 +89,7 @@ class HistoricoGeralViewModel(
             }
         }
 
-        val imc = medida.imc
+        val imc = calculadora.calcularIMC(paciente,medida)
 
         return AvaliacaoResultado(
             medidas = medida,

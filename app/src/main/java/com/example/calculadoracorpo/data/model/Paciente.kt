@@ -22,6 +22,7 @@ data class Paciente(
     val nome: String,
     val dataDeNascimento: LocalDate?,
     val sexo: Sexo,
+    val altura: Double?,
     ){
     // Calcula idade a partir da data de nascimento
     val idade: Int

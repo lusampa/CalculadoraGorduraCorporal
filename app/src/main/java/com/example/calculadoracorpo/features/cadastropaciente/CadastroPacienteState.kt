@@ -8,7 +8,6 @@ data class CadastroPacienteState (
     val dataNascimento: LocalDate? = null,
     val sexo: Sexo = Sexo.MASCULINO,
     val altura: String = "",
-    val peso: String = "",
 
     // UI
     val isLoading: Boolean = false,

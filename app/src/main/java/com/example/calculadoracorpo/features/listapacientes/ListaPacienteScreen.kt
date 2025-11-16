@@ -38,36 +38,41 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember // Importação para 'remember'
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
+// Remova LocalDensity e DpOffset se não os estiver usando mais
+// import androidx.compose.ui.platform.LocalDensity
+// import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.text.font.FontWeight // [NOVO] Importe FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.calculadoracorpo.data.model.Paciente
 import com.example.calculadoracorpo.ui.theme.components.FundoPadrao
+// [NOVO] Importe a nova classe de estado que você criou
+import com.example.calculadoracorpo.features.listapacientes.PacienteComUltimaMedida
 
 @Composable
 fun ListaPacienteScreen(
     onPacienteClick: (pacienteId: Int) -> Unit, // Navega para Histórico/Detalhes
     onAddPacienteClick: () -> Unit, // FAB: Cadastro de Novo Paciente
     onEditarPacienteClick: (pacienteId: Int) -> Unit,
-    onAdicionarMedidasClick: (pacienteId: Int) -> Unit // NOVO: Navega para a entrada de medidas
+    onAdicionarMedidasClick: (pacienteId: Int) -> Unit
 ){
-
+    // ... (seu código de repository, factory, viewModel está correto)
     val context = LocalContext.current.applicationContext
     val repository = (context as MainApplication).repository
-
     val factory = ListaPacienteViewModelFactory(repository)
     val viewModel: ListaPacienteViewModel = viewModel(factory = factory)
 
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold (
+
         containerColor = Color.Transparent,
         floatingActionButton = {
             FloatingActionButton(
@@ -77,32 +82,32 @@ fun ListaPacienteScreen(
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = "Adicionar Paciente",
-                    tint = Color.Green
+                    tint = Color.Green // (Você tinha Color.Green, talvez queira Color.White?)
                 )
             }
         }
     ) { paddingValues ->
         FundoPadrao (modifier = Modifier.padding(paddingValues)){
             when {
-                // Barra de progresso
+
                 uiState.isLoading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center){
                         CircularProgressIndicator(color = Color.White)
                     }
                 }
-                //Se tiver algum erro ele avisa
                 uiState.erro != null -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center){
-                        // [CORRIGIDO] Parâmetro 'color' nomeado
                         Text(text = "Erro: ${uiState.erro}", color = Color.Yellow)
                     }
                 }
-                //Se vazio, mostra aviso
-                uiState.pacientes.isEmpty() -> {
+
+                // [MODIFICADO] Verifique a lista 'pacientesComMedidas'
+                uiState.pacientesComMedidas.isEmpty() -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center){
                         Text(text = "Nenhum paciente cadastrado.", color = Color.White)
                     }
                 }
+
                 // Lista de pacientes
                 else -> {
                     LazyColumn(
@@ -110,13 +115,16 @@ fun ListaPacienteScreen(
                             .fillMaxSize()
                             .padding(horizontal = 16.dp)
                     ){
-                        items(uiState.pacientes, key = { it.id }) { paciente ->
+
+                        items(uiState.pacientesComMedidas, key = { it.paciente.id }) { item ->
                             ItemPaciente(
-                                paciente = paciente,
-                                onPacienteClick = { onPacienteClick( paciente.id) },
-                                onEditarClick = {onEditarPacienteClick(paciente.id) },
-                                onExcluirClick = { viewModel.onExcluirPaciente(paciente)},
-                                onAdicionarMedidasClick = { onAdicionarMedidasClick(paciente.id) } // NOVO CALLBACK
+                                // Passe o 'item' inteiro
+                                item = item,
+                                // Passe os IDs e objetos corretos
+                                onPacienteClick = { onPacienteClick( item.paciente.id) },
+                                onEditarClick = {onEditarPacienteClick(item.paciente.id) },
+                                onExcluirClick = { viewModel.onExcluirPaciente(item.paciente)},
+                                onAdicionarMedidasClick = { onAdicionarMedidasClick(item.paciente.id) }
                             )
                         }
                     }
@@ -128,23 +136,28 @@ fun ListaPacienteScreen(
 
 @Composable
 fun ItemPaciente(
-    paciente: Paciente,
+
+    item: PacienteComUltimaMedida,
     onPacienteClick: () -> Unit,
     onEditarClick: () -> Unit,
-    onExcluirClick: () -> Unit, // Recebe o evento do ViewModel
-    onAdicionarMedidasClick: () -> Unit, // NOVO PARAMETRO
+    onExcluirClick: () -> Unit,
+    onAdicionarMedidasClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // --- 1. Variáveis de estado para controlar o menu e o diálogo ---
+    // --- 1. Variáveis de estado (correto) ---
     var menuAberto by remember { mutableStateOf(false) }
     var mostrarDialogoExcluir by remember { mutableStateOf(false) }
+
+
+    val paciente = item.paciente
+    val imc = item.imc
 
     // --- 2. O Card clicável ---
     Card(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clickable { onPacienteClick() }, // Clique principal vai para Detalhes/Histórico
+            .clickable { onPacienteClick() },
         colors = CardDefaults.cardColors(
             containerColor = Color.White.copy(alpha = 0.2f)
         )
@@ -156,23 +169,35 @@ fun ItemPaciente(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = paciente.nome,
+                    text = paciente.nome, // Use o 'paciente' extraído
                     style = MaterialTheme.typography.titleLarge,
                     color = Color.White
                 )
-                Text(
-                    text = "Idade: ${paciente.idade} anos",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.8f)
-                )
-            }
 
-            // --- 4. O Botão de "Três Pontinhos" e o Menu Dropdown ---
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Idade: ${paciente.idade} anos", // Use o 'paciente' extraído
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                    Spacer(Modifier.width(16.dp))
+                    // [NOVO] Texto para exibir o IMC
+                    Text(
+                        text = "IMC: ${if (imc != null) String.format("%.1f", imc) else "N/D"}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+            // --- Fim da Modificação ---
+
             Box(
                 modifier = Modifier
-                    .wrapContentSize(Alignment.TopEnd) // <--- CHAVE PARA O MENU ABRIR CORRETAMENTE
+                    .wrapContentSize(Alignment.TopEnd)
             ) {
                 IconButton(onClick = { menuAberto = true }) {
                     Icon(
@@ -182,13 +207,13 @@ fun ItemPaciente(
                     )
                 }
 
-                // --- 5. O Menu Dropdown ---
+                // --- 5. O Menu Dropdown
                 DropdownMenu(
                     expanded = menuAberto,
                     onDismissRequest = { menuAberto = false },
                     offset = DpOffset(x = 16.dp, y = 0.dp)
                 ) {
-                    // Opção 1: Adicionar Medidas (NOVO)
+                    // Opção 1: Adicionar Medidas
                     DropdownMenuItem(
                         text = { Text("Adicionar Medidas") },
                         onClick = {
@@ -199,10 +224,8 @@ fun ItemPaciente(
                             Icon(Icons.Default.Add, "Adicionar Medidas")
                         }
                     )
-
-                    Divider() // Divisor para separar ações de dados pessoais
-
-                    // Opção 2: Editar Dados (Mantida)
+                    Divider()
+                    // Opção 2: Editar Dados
                     DropdownMenuItem(
                         text = { Text("Editar Dados") },
                         onClick = {
@@ -213,13 +236,12 @@ fun ItemPaciente(
                             Icon(Icons.Default.Edit, "Editar")
                         }
                     )
-
-                    // Opção 3: Excluir (Mantida)
+                    // Opção 3: Excluir
                     DropdownMenuItem(
                         text = { Text("Excluir Paciente") },
                         onClick = {
                             menuAberto = false
-                            mostrarDialogoExcluir = true // Abre o diálogo de confirmação
+                            mostrarDialogoExcluir = true
                         },
                         leadingIcon = {
                             Icon(Icons.Default.Delete, "Excluir")
@@ -230,11 +252,12 @@ fun ItemPaciente(
         }
     }
 
-    // --- 6. O Diálogo de Confirmação ---
+    // --- 6. O Diálogo de Confirmação (correto) ---
     if (mostrarDialogoExcluir) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoExcluir = false },
             title = { Text("Confirmar Exclusão") },
+            // [MODIFICADO] Use 'paciente.nome'
             text = { Text("Você tem certeza que deseja excluir o paciente '${paciente.nome}'? Esta ação não pode ser desfeita.") },
             confirmButton = {
                 TextButton(

@@ -87,7 +87,7 @@ class PdfGenerator(private val context: Context) {
         }
 
         drawDetail("Peso", String.format("%.1f Kg", resultado.medidas.peso ?: 0.0))
-        drawDetail("Altura", String.format("%.0f cm", resultado.medidas.altura ?: 0.0))
+        drawDetail("Altura", String.format("%.0f cm", paciente.altura ?: 0.0))
         drawDetail("Protocolo", resultado.medidas.protocoloUsado.name.replace("_", " "))
 
         yPos += lineHeight / 2

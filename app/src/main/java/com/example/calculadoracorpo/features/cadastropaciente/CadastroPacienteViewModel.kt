@@ -36,11 +36,6 @@ class CadastroPacienteViewModel (
         }
     }
 
-    fun onPesoChanged(novoPeso: String) {
-        if (novoPeso.matches(Regex("^\\d*\\.?\\d*\$"))) {
-            _uiState.update { it.copy(peso = novoPeso, erro = null) }
-        }
-    }
     fun onSalvarClicked() {
         val estado = _uiState.value
 
@@ -50,13 +45,19 @@ class CadastroPacienteViewModel (
             }
             return
         }
+        val alturaDouble = estado.altura.toDoubleOrNull()
+        if (alturaDouble == null) {
+            _uiState.update { it.copy(erro = "Altura deve ser um número válido.") }
+            return
+        }
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true) }
                 val novoPaciente = Paciente(
                     id = UUID.randomUUID().hashCode(),
                     nome = estado.nome.trim(),
                     dataDeNascimento = estado.dataNascimento,
-                    sexo = estado.sexo
+                    sexo = estado.sexo,
+                    altura = alturaDouble
                 )
                 try {
                     repository.inserirPaciente(novoPaciente)

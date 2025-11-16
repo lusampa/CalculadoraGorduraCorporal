@@ -1,5 +1,6 @@
 package com.example.calculadoracorpo.features.listapacientes
 
+import com.example.calculadoracorpo.data.model.Medidas
 import com.example.calculadoracorpo.data.model.Paciente
 
 /**
@@ -7,8 +8,18 @@ import com.example.calculadoracorpo.data.model.Paciente
  * @param pacientes é a lista de pacientes vindo do banco
  * @param erro Mesangem de erro caso tenha algum
  */
+
+data class PacienteComUltimaMedida(
+    val paciente: Paciente,
+    val ultimaMedida: Medidas?,
+    val imc: Double?
+)
+
+/**
+ * Estado da UI
+ */
 data class ListaPacienteState(
     val isLoading : Boolean = true,
-    val pacientes : List<Paciente> = emptyList(),
+    val pacientesComMedidas : List<PacienteComUltimaMedida> = emptyList(),
     val erro : String? = null
 )
