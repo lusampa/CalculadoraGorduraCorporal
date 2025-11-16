@@ -26,6 +26,7 @@ class CalculadoraGorduraCorporal {
                         avaliacao.dobraAbdominal,
                         avaliacao.dobraCoxa
                     )
+
                     Sexo.FEMININO -> somar(
                         avaliacao.dobraTriciptal,
                         avaliacao.dobraSupraIliaca,
@@ -93,5 +94,21 @@ class CalculadoraGorduraCorporal {
             return null
         }
         return dobras.filterNotNull().sum()
+    }
+
+
+    fun calcularIMC(paciente: Paciente, medida: Medidas): Double? {
+        // 1. Pega a altura do Paciente (em cm) e converte para metros
+        val alturaMetros = paciente.altura?.div(100.0)
+
+        // 2. Pega o peso da Medida
+        val pesoKg = medida.peso
+
+        // 3. Calcula
+        return if (pesoKg != null && alturaMetros != null && alturaMetros > 0) {
+            pesoKg / (alturaMetros * alturaMetros)
+        } else {
+            null
+        }
     }
 }

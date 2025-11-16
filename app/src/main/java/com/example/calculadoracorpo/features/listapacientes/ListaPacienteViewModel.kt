@@ -2,11 +2,13 @@ package com.example.calculadoracorpo.features.listapacientes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.calculadoracorpo.data.model.Paciente
+import com.example.calculadoracorpo.data.repository.CalculadoraGorduraCorporal
 import com.example.calculadoracorpo.data.repository.PacienteRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -18,14 +20,43 @@ class ListaPacienteViewModel (
     private val repository: PacienteRepository):ViewModel() {
     private val _uiState = MutableStateFlow(ListaPacienteState())
     val uiState: StateFlow<ListaPacienteState> = _uiState.asStateFlow()
-
+    private val calculadora = CalculadoraGorduraCorporal()
     init {
-        buscarPacientes()
+        buscarPacientesComMedidas()
     }
 
-    private fun buscarPacientes() {
+    private fun buscarPacientesComMedidas() {
         viewModelScope.launch {
-            repository.listarTodosPacientes()
+
+            val pacientesFlow = repository.listarTodosPacientes()
+            val medidasFlow = repository.listarTodasAvaliacoes()
+
+
+            pacientesFlow.combine(medidasFlow) { listaPacientes, listaMedidas ->
+
+                val ultimasMedidasMap = listaMedidas
+                    .groupBy { it.pacienteId }
+                    .mapValues { (_, medidas) ->
+                        medidas.maxByOrNull { it.dataAvaliacao }
+                    }
+
+                listaPacientes.map { paciente ->
+                    val ultimaMedida = ultimasMedidasMap[paciente.id]
+
+                    // [NOVO] Calcula o IMC
+                    val imc = if (ultimaMedida != null && ultimaMedida.peso != null && paciente.altura != null) {
+                        calculadora.calcularIMC(paciente, ultimaMedida)
+                    } else {
+                        null
+                    }
+
+                    PacienteComUltimaMedida(
+                        paciente = paciente,
+                        ultimaMedida = ultimaMedida,
+                        imc = imc // <-- [NOVO] Passa o IMC calculado
+                    )
+                }
+            }
                 .onStart {
                     _uiState.update { it.copy(isLoading = true, erro = null) }
                 }
@@ -34,13 +65,16 @@ class ListaPacienteViewModel (
                         it.copy(isLoading = false, erro = e.message)
                     }
                 }
-                    .collect { listaDePacientes ->
-                        _uiState.update {
-                            it.copy(isLoading = false, pacientes = listaDePacientes)
+                .collect { listaCombinada ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            pacientesComMedidas = listaCombinada
+                        )
                     }
                 }
-            }
         }
+    }
 
     fun onExcluirPaciente (paciente : Paciente){
         viewModelScope.launch {

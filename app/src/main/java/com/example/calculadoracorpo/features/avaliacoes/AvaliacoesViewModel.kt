@@ -34,6 +34,7 @@ class AvaliacoesViewModel(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
+
     private val _uiState = MutableStateFlow(AvaliacoesState())
     val uiState: StateFlow<AvaliacoesState> = _uiState.asStateFlow()
 
@@ -130,7 +131,7 @@ class AvaliacoesViewModel(
                 }
             }
         }
-        val imc = medida.imc
+        val imc = calculadora.calcularIMC(paciente, medida)
 
         return AvaliacaoResultado(
             medidas = medida,
