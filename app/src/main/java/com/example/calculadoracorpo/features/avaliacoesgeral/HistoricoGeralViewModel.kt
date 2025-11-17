@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -30,37 +31,39 @@ class HistoricoGeralViewModel(
 
     private fun carregarHistoricoGeral() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, erro = null) }
 
-            repository.listarTodasAvaliacoes()
-                .onStart { _uiState.update { it.copy(isLoading = true) } }
+            val todosPacientesFlow = repository.listarTodosPacientes()
+            val todasMedidasFlow = repository.listarTodasAvaliacoes()
+
+            todosPacientesFlow.combine(todasMedidasFlow) { listaPacientes, listaMedidas ->
+
+                val pacienteMap = listaPacientes.associateBy { it.id }
+
+                listaMedidas.mapNotNull { medida ->
+                    val paciente = pacienteMap[medida.pacienteId]
+                    if (paciente != null) {
+                        val resultado = calcularResultado(medida, paciente)
+                        AvaliacaoComPaciente(resultado, paciente.nome)
+                    } else {
+                        null
+                    }
+                }.sortedByDescending { it.resultado.medidas.dataAvaliacao }
+            }
+                .onStart { _uiState.update { it.copy(isLoading = true, erro = null) } }
                 .catch { e ->
                     _uiState.update { it.copy(isLoading = false, erro = e.message) }
                 }
-                .collect { listaMedidas ->
-                    // 2. Processa cada medida
-                    val historicoGeral = listaMedidas.mapNotNull { medida ->
-                        // Busca o Paciente correspondente
-                        val paciente = repository.buscarPaciente(medida.pacienteId)
-                        if (paciente != null) {
-                            val resultado = calcularResultado(medida, paciente)
-                            AvaliacaoComPaciente(resultado, paciente.nome)
-                        } else {
-                            null // Ignora medidas sem paciente
-                        }
-                    }.sortedByDescending { it.resultado.medidas.dataAvaliacao } // Ordena pela data
-
+                .collect { historicoGeralList ->
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            historicoGeral = historicoGeral
+                            historicoGeral = historicoGeralList
                         )
                     }
                 }
         }
     }
 
-    // --- LÓGICA DE CÁLCULO (Copiada de AvaliacoesViewModel.kt) ---
     private fun calcularResultado(medida: Medidas, paciente: Paciente): AvaliacaoResultado {
         val calculadora = CalculadoraGorduraCorporal()
 

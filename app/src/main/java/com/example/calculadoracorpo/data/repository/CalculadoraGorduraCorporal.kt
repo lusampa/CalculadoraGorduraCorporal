@@ -5,22 +5,13 @@ import com.example.calculadoracorpo.data.model.Paciente
 import com.example.calculadoracorpo.data.model.Protocolo
 import com.example.calculadoracorpo.data.model.Sexo
 
-
-/**
- * Classe de lógica de negócios responsável por
- * calcular a densidade e o percentual de gordura
- * Retorna null se os dados forem insuficientes.
- */
 class CalculadoraGorduraCorporal {
-    // ... (restante do código da classe CalculadoraGorduraCorporal)
     fun calcularGordura(avaliacao: Medidas?, paciente: Paciente?): Double? {
         if (avaliacao == null || paciente == null) return null
 
-        // --- PASSO 1: Obter a Soma das Dobras ---
         val somaDobras: Double? = when (avaliacao.protocoloUsado) {
             Protocolo.PROTOCOLO_3_DOBRAS -> {
                 when (paciente.sexo) {
-                    // CORRIGIDO: Usando os novos nomes de campos da Medidas (dobraPeitoral, dobraAbdominal, dobraCoxa)
                     Sexo.MASCULINO -> somar(
                         avaliacao.dobraPeitoral,
                         avaliacao.dobraAbdominal,
@@ -36,7 +27,6 @@ class CalculadoraGorduraCorporal {
             }
 
             Protocolo.PROTOCOLO_7_DOBRAS -> {
-                // CORRIGIDO: Usando os novos nomes de campos da Medidas (dobraXxx)
                 somar(
                     avaliacao.dobraPeitoral,
                     avaliacao.dobraAbdominal,
@@ -52,7 +42,6 @@ class CalculadoraGorduraCorporal {
         }
         if (somaDobras == null) return null
 
-        // --- PASSO 2: Aplicar a Fórmula de Densidade Correta ---
         val idade = paciente.idade.toDouble()
         val somaDobrasQuadrado = somaDobras * somaDobras
 
@@ -81,7 +70,6 @@ class CalculadoraGorduraCorporal {
             Protocolo.SEM_DEFINICAO -> null
         }
 
-        // --- PASSO 3: Converter Densidade em Percentual (Fórmula de Siri) ---
         if (densidade == null || densidade <= 0) return null
 
         val percentual = (495 / densidade) - 450
@@ -98,13 +86,10 @@ class CalculadoraGorduraCorporal {
 
 
     fun calcularIMC(paciente: Paciente, medida: Medidas): Double? {
-        // 1. Pega a altura do Paciente (em cm) e converte para metros
         val alturaMetros = paciente.altura?.div(100.0)
 
-        // 2. Pega o peso da Medida
         val pesoKg = medida.peso
 
-        // 3. Calcula
         return if (pesoKg != null && alturaMetros != null && alturaMetros > 0) {
             pesoKg / (alturaMetros * alturaMetros)
         } else {

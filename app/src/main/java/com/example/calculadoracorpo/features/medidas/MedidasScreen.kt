@@ -2,14 +2,12 @@ package com.example.calculadoracorpo.features.medidas
 
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.remember
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,29 +25,26 @@ import com.example.calculadoracorpo.MainApplication
 import com.example.calculadoracorpo.data.model.Protocolo
 import com.example.calculadoracorpo.ui.theme.components.FundoPadrao
 import java.time.format.DateTimeFormatter
-import kotlin.reflect.KFunction2
-import androidx.compose.foundation.background
+import com.example.calculadoracorpo.data.model.Sexo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MedidasScreen(
-    pacienteId: Int, // Recebido via navegação
+    pacienteId: Int,
+    avaliacaoId: Int = -1,
     onMedidasSalvas: () -> Unit,
 ) {
-    // --- 1. Injeção de Dependência e ViewModel ---
     val application = LocalContext.current.applicationContext as MainApplication
     val repository = application.repository
 
     val owner = LocalContext.current as SavedStateRegistryOwner
 
-    // Cria a Factory com os 3 argumentos esperados
-    val factory = MedidasViewModelFactory(repository, owner, pacienteId)
+    val factory = MedidasViewModelFactory(repository, owner, pacienteId, avaliacaoId)
     val viewModel: MedidasViewModel = viewModel(factory = factory)
 
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
-    // --- Efeito para navegar de volta quando salvar ---
     LaunchedEffect(uiState.salvouComSucesso) {
         if (uiState.salvouComSucesso) {
             onMedidasSalvas()
@@ -68,14 +63,13 @@ fun MedidasScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onMedidasSalvas) { // Usa onMedidasSalvas para voltar
-                        // CORRIGIDO: Ícone AutoMirrored
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
-        containerColor = Color.Transparent // O FundoPadrao vai cuidar da cor
+        containerColor = Color.Transparent
     ) { paddingValues ->
         FundoPadrao(modifier = Modifier.padding(paddingValues)) {
             Column(
@@ -87,7 +81,6 @@ fun MedidasScreen(
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // --- Título e Info do Paciente ---
                 Text(
                     "Paciente: ${uiState.nomePaciente}",
                     color = Color.White,
@@ -101,7 +94,6 @@ fun MedidasScreen(
                     modifier = Modifier.padding(bottom = 24.dp)
                 )
 
-                // --- 2. Seleção de Protocolo (Dropdown) ---
                 ProtocoloDropdown(
                     protocoloSelecionado = uiState.protocoloSelecionado,
                     onProtocoloChange = viewModel::onProtocoloChange
@@ -109,7 +101,6 @@ fun MedidasScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // --- 3. Campos Básicos (Peso e Altura) ---
                 Text("Medidas Básicas", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -129,14 +120,12 @@ fun MedidasScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // --- 4. Circunferências (NOVOS CAMPOS) ---
                 Text("Circunferências (em cm)", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 CircunferenciasInputs(uiState, viewModel)
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // --- 5. Campos de Dobras Cutâneas (Condicional) ---
                 Text("Dobras Cutâneas (em mm)", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -144,7 +133,6 @@ fun MedidasScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // --- 6. Botão Salvar e Erro ---
                 Button(
                     onClick = viewModel::onSalvarMedidasClick,
                     enabled = !uiState.isLoading,
@@ -177,7 +165,6 @@ fun MedidasScreen(
     }
 }
 
-// --- Componentes Reutilizáveis ---
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun ProtocoloDropdown(
@@ -209,7 +196,7 @@ fun ProtocoloDropdown(
                     disabledIndicatorColor = Color.Transparent,
                     disabledTrailingIconColor = Color.Black.copy(alpha = 0.6f)
                 ),
-                enabled = false // Tornar o TextField inativo, controlando a abertura pelo ExposedDropdownMenuBox
+                enabled = false
             )
             ExposedDropdownMenu(
                 expanded = dropdownAberto,
@@ -238,7 +225,6 @@ fun CampoMedida(
     modifier: Modifier = Modifier,
     isObrigatorio: Boolean = false
 ) {
-    // Cores reutilizadas do CadastroPacienteScreen
     val corCampoFundo = Color(0xFFD9D9D9)
     val corCampoTexto = Color.Black.copy(alpha = 0.8f)
 
@@ -267,7 +253,6 @@ fun CampoMedida(
     }
 }
 
-// NOVO: Componente para as Circunferências
 @Composable
 fun CircunferenciasInputs(uiState: MedidasState, viewModel: MedidasViewModel) {
     val todasCircunferencias = mapOf(
@@ -288,7 +273,6 @@ fun CircunferenciasInputs(uiState: MedidasState, viewModel: MedidasViewModel) {
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Coluna 1
                 val key1 = keys[index]
                 val (value1, onChange1) = todasCircunferencias[key1]!!
                 CampoMedida(
@@ -298,7 +282,6 @@ fun CircunferenciasInputs(uiState: MedidasState, viewModel: MedidasViewModel) {
                     modifier = Modifier.weight(1f)
                 )
 
-                // Coluna 2 (se existir)
                 index++
                 if (index < keys.size) {
                     val key2 = keys[index]
@@ -321,10 +304,9 @@ fun CircunferenciasInputs(uiState: MedidasState, viewModel: MedidasViewModel) {
 
 @Composable
 fun DobrasCutaneasInputs(uiState: MedidasState, viewModel: MedidasViewModel) {
-    // Define quais campos são visíveis com base no Protocolo selecionado
     val protocolo = uiState.protocoloSelecionado
+    val sexo = uiState.sexoPaciente
 
-    // Lista de todas as dobras (NOMES CORRIGIDOS)
     val todasDobras = mapOf(
         "Peitoral" to Pair(uiState.dobraPeitoral, viewModel::onDobraPeitoralChange),
         "Abdominal" to Pair(uiState.dobraAbdominal, viewModel::onDobraAbdominalChange),
@@ -335,14 +317,17 @@ fun DobrasCutaneasInputs(uiState: MedidasState, viewModel: MedidasViewModel) {
         "Coxa" to Pair(uiState.dobraCoxa, viewModel::onDobraCoxaChange)
     )
 
-    // Filtra quais campos mostrar
     val dobrasVisiveis = when (protocolo) {
         Protocolo.PROTOCOLO_7_DOBRAS -> todasDobras.keys.toList()
-        Protocolo.PROTOCOLO_3_DOBRAS -> listOf("Peitoral", "Triciptal", "Supra-Ilíaca", "Coxa")
+        Protocolo.PROTOCOLO_3_DOBRAS -> {
+            when (sexo) {
+                Sexo.MASCULINO -> listOf("Peitoral", "Abdominal", "Coxa")
+                Sexo.FEMININO -> listOf("Triciptal", "Supra-Ilíaca", "Coxa")
+            }
+        }
         Protocolo.SEM_DEFINICAO -> emptyList()
     }
 
-    // Layout em duas colunas
     Column {
         var index = 0
         while (index < dobrasVisiveis.size) {
@@ -350,7 +335,6 @@ fun DobrasCutaneasInputs(uiState: MedidasState, viewModel: MedidasViewModel) {
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Primeira coluna
                 val key1 = dobrasVisiveis[index]
                 val (value1, onChange1) = todasDobras[key1]!!
                 CampoMedida(
@@ -361,7 +345,6 @@ fun DobrasCutaneasInputs(uiState: MedidasState, viewModel: MedidasViewModel) {
                     isObrigatorio = true
                 )
 
-                // Segunda coluna (se existir)
                 index++
                 if (index < dobrasVisiveis.size) {
                     val key2 = dobrasVisiveis[index]
@@ -374,7 +357,7 @@ fun DobrasCutaneasInputs(uiState: MedidasState, viewModel: MedidasViewModel) {
                         isObrigatorio = true
                     )
                 } else {
-                    Spacer(modifier = Modifier.weight(1f)) // Para alinhar a primeira coluna à esquerda
+                    Spacer(modifier = Modifier.weight(1f))
                 }
                 index++
             }

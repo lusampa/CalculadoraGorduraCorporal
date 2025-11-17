@@ -12,9 +12,9 @@ import com.example.calculadoracorpo.data.model.Paciente
 
 
 
-@Database(entities = [Paciente::class , Medidas::class] ,version =4)
+@Database(entities = [Paciente::class , Medidas::class] ,version =4, exportSchema = false)
 @TypeConverters(Converters::class)
-    abstract class AppDatabase: RoomDatabase(){
+abstract class AppDatabase: RoomDatabase(){
 
     abstract fun PacienteDao(): PacienteDao
     abstract fun MedidasDao(): MedidasDao

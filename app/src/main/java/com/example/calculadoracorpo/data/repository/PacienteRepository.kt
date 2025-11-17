@@ -1,5 +1,4 @@
 package com.example.calculadoracorpo.data.repository
-/** É o mediador entre o Room e a ViewModel e o banco de dados*/
 
 import com.example.calculadoracorpo.data.local.MedidasDao
 import com.example.calculadoracorpo.data.local.PacienteDao
@@ -10,7 +9,7 @@ import java.time.LocalDate
 
 class PacienteRepository(
     private val pacienteDao: PacienteDao,
-    private val  medidasDao: MedidasDao
+    private val medidasDao: MedidasDao
 ) {
     // CRUD Do paciente
     suspend fun inserirPaciente(paciente: Paciente) = pacienteDao.inserir(paciente)
@@ -19,7 +18,7 @@ class PacienteRepository(
     suspend fun buscarPaciente(id: Int): Paciente? = pacienteDao.buscarPorId(id)
     fun listarTodosPacientes(): Flow<List<Paciente>> = pacienteDao.buscarTodos()
 
-    // CRUD Das Medidas
+    // CRUD de Avaliações (Medidas)
     suspend fun inserirAvaliacao(medidas: Medidas) = medidasDao.inserir(medidas)
     fun buscarAvaliacoes(pacienteId: Int): Flow<List<Medidas>> {
         return medidasDao.buscarAvaliacoesdoPaciente(pacienteId)
@@ -37,7 +36,13 @@ class PacienteRepository(
         return medidasDao.buscarAvaliacaoAnterior(pacienteId, dataAtual)
     }
 
+    suspend fun buscarMedidaPorId(id: Int): Medidas? = medidasDao.buscarMedidaPorId(id)
+    suspend fun excluirAvaliacao(medidas: Medidas) = medidasDao.excluir(medidas)
     fun listarTodasAvaliacoes(): Flow<List<Medidas>> {
         return medidasDao.buscarTodasAvaliacoes()
+    }
+
+    fun listarUltimasAvaliacoesDeCadaPaciente(): Flow<List<Medidas>> {
+        return medidasDao.listarUltimasAvaliacoesDeCadaPaciente()
     }
 }

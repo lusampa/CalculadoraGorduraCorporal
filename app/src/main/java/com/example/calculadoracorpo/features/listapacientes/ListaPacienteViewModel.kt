@@ -29,21 +29,18 @@ class ListaPacienteViewModel (
         viewModelScope.launch {
 
             val pacientesFlow = repository.listarTodosPacientes()
-            val medidasFlow = repository.listarTodasAvaliacoes()
+            val ultimasMedidasFlow = repository.listarUltimasAvaliacoesDeCadaPaciente() // <<< NOVO
 
+            // Combina Pacientes com as Ultimas Avaliações
+            pacientesFlow.combine(ultimasMedidasFlow) { listaPacientes, listaUltimasMedidas -> // <<< ALTERADO
 
-            pacientesFlow.combine(medidasFlow) { listaPacientes, listaMedidas ->
-
-                val ultimasMedidasMap = listaMedidas
-                    .groupBy { it.pacienteId }
-                    .mapValues { (_, medidas) ->
-                        medidas.maxByOrNull { it.dataAvaliacao }
-                    }
+                // 1. Cria o mapa de acesso rápido (Otimização!)
+                val ultimasMedidasMap = listaUltimasMedidas.associateBy { it.pacienteId }
 
                 listaPacientes.map { paciente ->
                     val ultimaMedida = ultimasMedidasMap[paciente.id]
 
-                    // [NOVO] Calcula o IMC
+                    // [NOVO] Cálculo do IMC (inalterado)
                     val imc = if (ultimaMedida != null && ultimaMedida.peso != null && paciente.altura != null) {
                         calculadora.calcularIMC(paciente, ultimaMedida)
                     } else {
@@ -53,7 +50,7 @@ class ListaPacienteViewModel (
                     PacienteComUltimaMedida(
                         paciente = paciente,
                         ultimaMedida = ultimaMedida,
-                        imc = imc // <-- [NOVO] Passa o IMC calculado
+                        imc = imc
                     )
                 }
             }
