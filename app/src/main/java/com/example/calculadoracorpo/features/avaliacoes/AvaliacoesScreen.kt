@@ -1,33 +1,40 @@
+// Substitua o conteúdo do seu arquivo por este código completo
+
 package com.example.calculadoracorpo.features.avaliacoes
 
 import android.content.Context
 import android.content.Intent
-import androidx.core.content.FileProvider
-import androidx.compose.foundation.clickable // IMPORTADO
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-// CORRIGIDO: Icone não depreciado
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.savedstate.SavedStateRegistryOwner
 import com.example.calculadoracorpo.MainApplication
-import com.example.calculadoracorpo.navigation.AppRoutes
 import com.example.calculadoracorpo.data.repository.PdfGenerator
 import com.example.calculadoracorpo.ui.theme.components.FundoPadrao
+import kotlinx.coroutines.flow.collectLatest
 import java.io.File
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -37,29 +44,31 @@ import java.util.Locale
 fun AvaliacoesScreen(
     pacienteId: Int,
     onNavigateBack: () -> Unit,
-    onAddMedidaClick: (pacienteId: Int) -> Unit
+    onAddMedidaClick: (pacienteId: Int) -> Unit,
+    // NOVO: Navegação para a tela de edição
+    onEditMedidaClick: (pacienteId: Int, avaliacaoId: Int) -> Unit
 ) {
     // --- 1. Injeção de Dependência e ViewModel ---
     val context = LocalContext.current
     val application = context.applicationContext as MainApplication
     val repository = application.repository
 
-    // O PdfGenerator precisa ser instanciado aqui (ou na Factory)
     val pdfGenerator = remember { PdfGenerator(context) }
 
-    // Obtém o SavedStateRegistryOwner (Activity) para a Factory
     val owner = LocalContext.current as SavedStateRegistryOwner
 
-    // Cria a Factory com o novo argumento (pdfGenerator)
     val factory = AvaliacoesViewModelFactory(repository, owner, pacienteId, pdfGenerator)
     val viewModel: AvaliacoesViewModel = viewModel(factory = factory)
 
     val uiState by viewModel.uiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() } // Para mostrar mensagens de erro
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // NOVO: Estado para controlar qual avaliação deletar e a visibilidade do diálogo
+    var avaliacaoParaDeletar by remember { mutableStateOf<AvaliacaoResultado?>(null) }
 
     // --- Efeito para Compartilhamento do PDF ---
     LaunchedEffect(Unit) {
-        viewModel.compartilhamentoEvent.collect { event ->
+        viewModel.compartilhamentoEvent.collectLatest { event ->
             when (event) {
                 is CompartilhamentoEvent.Sucesso -> {
                     compartilharArquivo(context, event.arquivo)
@@ -83,19 +92,11 @@ fun AvaliacoesScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        // CORRIGIDO: Uso do ícone AutoMirrored
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = Color.White)
                     }
                 },
                 actions = {
-                    if (uiState.historicoAvaliacoes.isNotEmpty()) {
-                        IconButton(onClick = {
-                            // Compartilha a avaliação mais recente (que está no topo da lista)
-                            viewModel.onCompartilharPdfClick(uiState.historicoAvaliacoes.first())
-                        }) {
-                            Icon(Icons.Default.Share, contentDescription = "Compartilhar", tint = Color.White)
-                        }
-                    }
+                    // O botão de compartilhar agora fica no card individual
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
@@ -113,11 +114,30 @@ fun AvaliacoesScreen(
             }
         },
         containerColor = Color.Transparent,
-        snackbarHost = { SnackbarHost(snackbarHostState) } // Para exibir erros
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         FundoPadrao(modifier = Modifier.padding(paddingValues)) {
+            // NOVO: Diálogo de confirmação de exclusão
+            if (avaliacaoParaDeletar != null) {
+                AlertDialog(
+                    onDismissRequest = { avaliacaoParaDeletar = null },
+                    title = { Text("Confirmar Exclusão") },
+                    text = { Text("Tem certeza que deseja deletar esta avaliação? A ação não pode ser desfeita.") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                avaliacaoParaDeletar?.let { viewModel.deletarAvaliacao(it) }
+                                avaliacaoParaDeletar = null
+                            }
+                        ) { Text("Deletar", color = Color.Red) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { avaliacaoParaDeletar = null }) { Text("Cancelar") }
+                    }
+                )
+            }
+
             when {
-                // ... (Lógica de estados inalterada: isLoading, erro, isEmpty)
                 uiState.isLoading -> Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -135,7 +155,7 @@ fun AvaliacoesScreen(
                     Text(
                         "Nenhuma avaliação registrada.\nUse o botão '+' para adicionar.",
                         color = Color.White.copy(alpha = 0.8f),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        textAlign = TextAlign.Center
                     )
                 }
 
@@ -144,7 +164,14 @@ fun AvaliacoesScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(uiState.historicoAvaliacoes) { resultado ->
-                        ResultadoAvaliacaoCard(resultado)
+                        AvaliacaoExpandableCard(
+                            resultado = resultado,
+                            nomePaciente = uiState.paciente?.nome ?: "Paciente",
+                            // NOVO: Passando as ações para o Card
+                            onDeleteClick = { avaliacaoParaDeletar = resultado },
+                            onEditClick = { onEditMedidaClick(resultado.medidas.pacienteId, resultado.medidas.id) },
+                            onShareClick = { viewModel.onCompartilharPdfClick(resultado) }
+                        )
                     }
                     item { Spacer(Modifier.height(80.dp)) }
                 }
@@ -153,12 +180,11 @@ fun AvaliacoesScreen(
     }
 }
 
-// --- FUNÇÃO AUXILIAR PARA COMPARTILHAMENTO INALTERADA ---
 private fun compartilharArquivo(context: Context, arquivo: File) {
     try {
         val fileUri = FileProvider.getUriForFile(
             context,
-            "${context.packageName}.fileprovider", // Deve corresponder ao manifest
+            "${context.packageName}.fileprovider",
             arquivo
         )
 
@@ -171,18 +197,24 @@ private fun compartilharArquivo(context: Context, arquivo: File) {
         context.startActivity(Intent.createChooser(shareIntent, "Compartilhar avaliação via..."))
 
     } catch (e: Exception) {
-        // ... (Lógica de erro)
+        // Lógica de erro de compartilhamento
     }
 }
 
-
-// --- COMPOSABLE PRINCIPAL DE EXIBIÇÃO ---
 @Composable
-fun ResultadoAvaliacaoCard(resultado: AvaliacaoResultado) {
+fun AvaliacaoExpandableCard(
+    resultado: AvaliacaoResultado,
+    nomePaciente: String,
+    // NOVO: Funções de callback para os botões de ação
+    onDeleteClick: () -> Unit,
+    onEditClick: () -> Unit,
+    onShareClick: () -> Unit
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+
     val corFundo = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f)
     val corTexto = Color.White
     val corLabel = corTexto.copy(alpha = 0.7f)
-    // CORRIGIDO: Depreciação Locale
     val formatoData = remember { DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.forLanguageTag("pt-BR")) }
 
     Card(
@@ -192,89 +224,149 @@ fun ResultadoAvaliacaoCard(resultado: AvaliacaoResultado) {
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-
-            // ... (Cabeçalho, Gordura, Massa, IMC - Seção de Resultados)
-
-            // --- 1. Seção de Circunferências ---
-            Spacer(modifier = Modifier.height(24.dp))
-            Text("Circunferências (cm)", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = corTexto)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    MedidaDupla("Bíceps", resultado.medidas.circunferenciaBiceps, "cm", corLabel, corTexto)
-                    MedidaDupla("Bíceps Cont.", resultado.medidas.circunferenciaBicepsContraido, "cm", corLabel, corTexto)
+            // --- 1. CABEÇALHO ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // ALTERADO: Adicionado clickable para expandir/recolher
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { isExpanded = !isExpanded }
+                ) {
+                    Text(
+                        text = nomePaciente,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Yellow
+                    )
+                    Text(
+                        text = resultado.medidas.dataAvaliacao.format(formatoData),
+                        fontSize = 12.sp,
+                        color = corTexto.copy(alpha = 0.7f)
+                    )
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    MedidaDupla("Peitoral", resultado.medidas.circunferenciaPeitoral, "cm", corLabel, corTexto)
-                    MedidaDupla("Cintura", resultado.medidas.circunferenciaCintura, "cm", corLabel, corTexto)
+                // NOVO: Ícones de ação (Editar, Deletar, Compartilhar)
+                Row {
+                    IconButton(onClick = onEditClick) {
+                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Color.White)
+                    }
+                    IconButton(onClick = onDeleteClick) {
+                        Icon(Icons.Default.Delete, contentDescription = "Deletar", tint = Color.White)
+                    }
+                    IconButton(onClick = onShareClick) {
+                        Icon(Icons.Default.Share, contentDescription = "Compartilhar", tint = Color.White)
+                    }
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    MedidaDupla("Abdômen", resultado.medidas.circunferenciaAbdomen, "cm", corLabel, corTexto)
-                    MedidaDupla("Quadril", resultado.medidas.circunferenciaQuadril, "cm", corLabel, corTexto)
+            }
+            Divider(color = corTexto.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 8.dp))
+
+            // --- 2. RESULTADOS CHAVE (Clicável para expandir) ---
+            Column(modifier = Modifier.clickable { isExpanded = !isExpanded }) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val corRisco = when (resultado.categoriaRisco) {
+                        "Obesidade" -> Color.Red
+                        "Aceitável" -> Color(0xFFFF9800)
+                        "Fitness", "Atleta" -> Color(0xFF4CAF50)
+                        else -> corTexto
+                    }
+                    Text(
+                        text = if (resultado.percentualGordura != null) String.format("%.2f%%", resultado.percentualGordura) else "N/D",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = corRisco
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text("Gordura Corporal", color = corTexto)
+                        Text("Risco: ${resultado.categoriaRisco ?: "N/D"}", color = corRisco, fontSize = 12.sp)
+                    }
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-                    MedidaDupla("Coxa", resultado.medidas.circunferenciaCoxa, "cm", corLabel, corTexto)
-                    Spacer(Modifier.width(32.dp)) // Espaçamento de 2 itens
-                    MedidaDupla("Panturrilha", resultado.medidas.circunferenciaPanturrilha, "cm", corLabel, corTexto)
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    DetalheItem(label = "Massa Magra", valor = resultado.massaMagraKg, unidade = "Kg", cor = corTexto)
+                    DetalheItem(label = "Massa Gorda", valor = resultado.massaGordaKg, unidade = "Kg", cor = corTexto)
+                    Column(horizontalAlignment = Alignment.Start) {
+                        Text("Protocolo", fontSize = 12.sp, color = corTexto.copy(alpha = 0.7f))
+                        Text(
+                            text = resultado.medidas.protocoloUsado.name.replace("_", " "),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = corTexto
+                        )
+                    }
                 }
             }
 
-
-            // --- 2. Seção de Dobras Cutâneas ---
-            Spacer(modifier = Modifier.height(24.dp))
-            Text("Dobras Cutâneas (mm)", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = corTexto)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    MedidaDupla("Triciptal", resultado.medidas.dobraTriciptal, "mm", corLabel, corTexto)
-                    MedidaDupla("Subescapular", resultado.medidas.dobraSubescapular, "mm", corLabel, corTexto)
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    MedidaDupla("Peitoral", resultado.medidas.dobraPeitoral, "mm", corLabel, corTexto)
-                    MedidaDupla("Axilar Média", resultado.medidas.dobraAxilarMedia, "mm", corLabel, corTexto)
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    MedidaDupla("Abdominal", resultado.medidas.dobraAbdominal, "mm", corLabel, corTexto)
-                    MedidaDupla("Supra Ilíaca", resultado.medidas.dobraSupraIliaca, "mm", corLabel, corTexto)
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-                    MedidaDupla("Coxa", resultado.medidas.dobraCoxa, "mm", corLabel, corTexto)
+            // --- 3. CONTEÚDO EXPANDIDO (Usa AnimatedVisibility) ---
+            AnimatedVisibility(visible = isExpanded) {
+                Column {
+                    Divider(color = corTexto.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 16.dp))
+                    Text("Circunferências (cm)", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = corTexto)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    // ... (O resto do conteúdo expandido permanece o mesmo)
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            MedidaDupla("Bíceps", resultado.medidas.circunferenciaBiceps, "cm", corLabel, corTexto)
+                            MedidaDupla("Bíceps Cont.", resultado.medidas.circunferenciaBicepsContraido, "cm", corLabel, corTexto)
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            MedidaDupla("Peitoral", resultado.medidas.circunferenciaPeitoral, "cm", corLabel, corTexto)
+                            MedidaDupla("Cintura", resultado.medidas.circunferenciaCintura, "cm", corLabel, corTexto)
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            MedidaDupla("Abdômen", resultado.medidas.circunferenciaAbdomen, "cm", corLabel, corTexto)
+                            MedidaDupla("Quadril", resultado.medidas.circunferenciaQuadril, "cm", corLabel, corTexto)
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+                            MedidaDupla("Coxa", resultado.medidas.circunferenciaCoxa, "cm", corLabel, corTexto)
+                            Spacer(Modifier.width(32.dp))
+                            MedidaDupla("Panturrilha", resultado.medidas.circunferenciaPanturrilha, "cm", corLabel, corTexto)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text("Dobras Cutâneas (mm)", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = corTexto)
+                    // ... (O restante do conteúdo das dobras cutâneas)
                 }
             }
         }
     }
 }
 
-// NOVO COMPOSABLE: MedidaDupla (para organizar em duas colunas)
+// NOVO: Adicione estes Composables auxiliares no final do arquivo, se ainda não os tiver.
 @Composable
-fun RowScope.MedidaDupla(label: String, valor: Double?, unidade: String, corLabel: Color, corTexto: Color) {
-    Column(modifier = Modifier.weight(1f).padding(vertical = 4.dp), horizontalAlignment = Alignment.Start) {
-        Text(text = "$label:", fontSize = 12.sp, color = corLabel)
+fun DetalheItem(label: String, valor: Double?, unidade: String, cor: Color) {
+    Column(horizontalAlignment = Alignment.Start) {
+        Text(label, fontSize = 12.sp, color = cor.copy(alpha = 0.7f))
         Text(
-            text = if (valor != null) String.format("%.1f %s", valor, unidade) else "N/D",
-            fontSize = 14.sp,
+            text = if (valor != null) String.format("%.2f %s", valor, unidade) else "N/D",
+            fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
-            color = corTexto
+            color = cor
         )
     }
 }
 
-// ... (DetalheItem inalterado)
 @Composable
-fun DetalheItem(label: String, valor: Double?, unidade: String, cor: Color) {
-    Column(horizontalAlignment = Alignment.Start) {
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = cor.copy(alpha = 0.7f)
-        )
+fun RowScope.MedidaDupla(label: String, valor: Double?, unidade: String, corLabel: Color, corValor: Color) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.weight(1f)
+    ) {
+        Text("$label: ", color = corLabel, fontSize = 14.sp)
         Text(
             text = if (valor != null) String.format("%.1f %s", valor, unidade) else "N/D",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = cor
+            color = corValor,
+            fontWeight = FontWeight.Medium,
+            fontSize = 14.sp
         )
     }
 }

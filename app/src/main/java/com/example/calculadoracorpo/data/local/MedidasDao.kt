@@ -20,29 +20,34 @@ interface MedidasDao {
     @Delete
     suspend fun excluir(medidas:Medidas)
 
-    // CORRIGIDO: Ordena por data mais recente (DESC) para aparecer no topo do histórico individual.
     @Query("SELECT * FROM medidas WHERE pacienteId = :pacienteId ORDER BY dataAvaliacao DESC")
     fun buscarAvaliacoesdoPaciente(pacienteId: Int) : Flow<List<Medidas>>
 
-    /** A função abaixo busca a avaliação imediatamente anterior à data fornecida para um paciente.
-    1. Filtra pelo pacienteId.
-    2. Filtra por datas MENORES (<) que a data da avaliação atual.
-    3. Ordena pela data em ordem DECRESCENTE (a mais próxima primeiro).
-    4. Pega apenas a PRIMEIRA (LIMIT 1).
-     */
     @Query("SELECT * FROM medidas WHERE pacienteId = :pacienteId AND dataAvaliacao < :dataDaAvaliacaoAtual " +
             "ORDER BY dataAvaliacao DESC LIMIT 1")
     suspend fun buscarAvaliacaoAnterior(pacienteId: Int, dataDaAvaliacaoAtual: LocalDate): Medidas?
 
+    // NOVO: Busca uma única medida por ID (usada para Edição)
+    @Query("SELECT * FROM medidas WHERE id = :id LIMIT 1")
+    suspend fun buscarMedidaPorId(id: Int): Medidas?
 
-    // Função de buscar a primeira e a última caso necessário
     @Query("SELECT * FROM medidas WHERE pacienteId =  :pacienteId ORDER BY dataAvaliacao ASC LIMIT 1")
     suspend fun  buscarPrimeiraAvaliacao(pacienteId: Int): Medidas?
 
     @Query("SELECT * FROM medidas WHERE pacienteId = :pacienteId ORDER BY dataAvaliacao DESC LIMIT 1")
     suspend fun buscarUltimaAvaliacao(pacienteId: Int):Medidas?
 
-    // Já está correto, ordena por data mais recente (DESC) para o histórico geral.
     @Query("SELECT * FROM medidas ORDER BY dataAvaliacao DESC")
     fun buscarTodasAvaliacoes(): Flow<List<Medidas>>
+
+    @Query("""
+        SELECT m.* FROM medidas m
+        INNER JOIN (
+            SELECT pacienteId, MAX(dataAvaliacao) AS maxData 
+            FROM medidas
+            GROUP BY pacienteId
+        ) AS sub ON m.pacienteId = sub.pacienteId AND m.dataAvaliacao = sub.maxData
+        ORDER BY m.dataAvaliacao DESC
+    """)
+    fun listarUltimasAvaliacoesDeCadaPaciente(): Flow<List<Medidas>>
 }

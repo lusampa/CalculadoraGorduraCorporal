@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.util.UUID
 
-class CadastroPacienteViewModel (
+class   CadastroPacienteViewModel (
     private val repository: PacienteRepository) : ViewModel() {
         private val _uiState = MutableStateFlow(CadastroPacienteState())
         val uiState: StateFlow<CadastroPacienteState> = _uiState.asStateFlow()
@@ -53,7 +53,7 @@ class CadastroPacienteViewModel (
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true) }
                 val novoPaciente = Paciente(
-                    id = UUID.randomUUID().hashCode(),
+                    id = 0,
                     nome = estado.nome.trim(),
                     dataDeNascimento = estado.dataNascimento,
                     sexo = estado.sexo,

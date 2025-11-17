@@ -5,15 +5,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.savedstate.SavedStateRegistryOwner
 import com.example.calculadoracorpo.data.repository.PacienteRepository
+import com.example.calculadoracorpo.navigation.AppRoutes
 
-/**
- * Factory para criar o MedidasViewModel, injetando o PacienteRepository
- * e o SavedStateHandle para ler o argumento 'pacienteId' da navegação.
- */
 class MedidasViewModelFactory(
     private val repository: PacienteRepository,
-    owner: SavedStateRegistryOwner, // Necessário para SavedStateHandle
-    private val defaultArgs: Int // Usamos o defaultArgs para passar o pacienteId inicial
+    owner: SavedStateRegistryOwner,
+    private val pacienteId: Int, // Argumento de Paciente
+    private val avaliacaoId: Int // Argumento de Avaliação (usado para Edição)
 ) : AbstractSavedStateViewModelFactory(owner, null) {
 
     override fun <T : ViewModel> create(
@@ -22,9 +20,13 @@ class MedidasViewModelFactory(
         handle: SavedStateHandle
     ): T {
         if (modelClass.isAssignableFrom(MedidasViewModel::class.java)) {
-            // Define o argumento inicial no SavedStateHandle, caso ele não exista
-            if (!handle.contains("pacienteId")) {
-                handle["pacienteId"] = defaultArgs
+            // Define o PacienteId no SavedStateHandle
+            if (!handle.contains(AppRoutes.ARG_PACIENTE_ID)) {
+                handle[AppRoutes.ARG_PACIENTE_ID] = pacienteId
+            }
+            // Define o AvaliacaoId no SavedStateHandle
+            if (!handle.contains(AppRoutes.ARG_AVALIACAO_ID)) {
+                handle[AppRoutes.ARG_AVALIACAO_ID] = avaliacaoId
             }
             @Suppress("UNCHECKED_CAST")
             return MedidasViewModel(repository, handle) as T

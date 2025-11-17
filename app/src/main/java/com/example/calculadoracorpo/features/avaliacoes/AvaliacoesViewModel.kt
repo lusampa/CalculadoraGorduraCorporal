@@ -9,14 +9,14 @@ import com.example.calculadoracorpo.data.model.Sexo
 import com.example.calculadoracorpo.data.repository.PacienteRepository
 import com.example.calculadoracorpo.navigation.AppRoutes
 import com.example.calculadoracorpo.data.repository.CalculadoraGorduraCorporal
-import com.example.calculadoracorpo.data.repository.PdfGenerator // IMPORTADO
-import kotlinx.coroutines.channels.Channel // IMPORTADO
+import com.example.calculadoracorpo.data.repository.PdfGenerator
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.receiveAsFlow // IMPORTADO
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
@@ -28,9 +28,14 @@ sealed interface CompartilhamentoEvent {
     data class Erro(val mensagem: String) : CompartilhamentoEvent
 }
 
+// --- NOVO: Eventos de Navegação/Ação (para a UI) ---
+sealed interface AvaliacaoNavigationEvent {
+    data class NavigateToEdit(val pacienteId: Int, val medidaId: Int) : AvaliacaoNavigationEvent
+}
+
 class AvaliacoesViewModel(
     private val repository: PacienteRepository,
-    private val pdfGenerator: PdfGenerator, // DEPENDÊNCIA INJETADA
+    private val pdfGenerator: PdfGenerator,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -38,9 +43,13 @@ class AvaliacoesViewModel(
     private val _uiState = MutableStateFlow(AvaliacoesState())
     val uiState: StateFlow<AvaliacoesState> = _uiState.asStateFlow()
 
-    // Canal para enviar eventos de compartilhamento para a UI (fora do StateFlow)
+    // Canal para eventos de compartilhamento
     private val _compartilhamentoEvent = Channel<CompartilhamentoEvent>()
     val compartilhamentoEvent = _compartilhamentoEvent.receiveAsFlow()
+
+    // NOVO: Canal para eventos de navegação
+    private val _navigationEvent = Channel<AvaliacaoNavigationEvent>()
+    val navigationEvent = _navigationEvent.receiveAsFlow() // <<< NOVO
 
     private val pacienteId: Int = savedStateHandle[AppRoutes.ARG_PACIENTE_ID] ?: -1
 
@@ -53,7 +62,6 @@ class AvaliacoesViewModel(
     }
 
     private fun carregarDadosDoPaciente() {
-        // ... (Lógica de Carregamento inalterada)
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, erro = null) }
 
@@ -85,7 +93,6 @@ class AvaliacoesViewModel(
         }
     }
 
-    // --- NOVA FUNÇÃO: Gera o PDF e envia o evento de compartilhamento ---
     fun onCompartilharPdfClick(avaliacaoResultado: AvaliacaoResultado) {
         viewModelScope.launch {
             val paciente = _uiState.value.paciente
@@ -94,7 +101,6 @@ class AvaliacoesViewModel(
                 return@launch
             }
             try {
-                // Gera o PDF (assumindo que AvaliacaoResultado é a última avaliação)
                 val arquivoPdf = pdfGenerator.generatePdf(paciente, avaliacaoResultado)
                 _compartilhamentoEvent.send(CompartilhamentoEvent.Sucesso(arquivoPdf))
             } catch (e: IOException) {
@@ -105,9 +111,29 @@ class AvaliacoesViewModel(
         }
     }
 
-    // --- LÓGICA DE CÁLCULO INALTERADA ---
+    // --- FUNÇÕES DE CRUD ---
+    fun deletarAvaliacao(avaliacao: AvaliacaoResultado) {
+        viewModelScope.launch {
+            try {
+                // CORRIGIDO: Usa o método correto do repositório
+                repository.excluirAvaliacao(avaliacao.medidas)
+            } catch (e: Exception) {
+                // CORRIGIDO: Usa 'send' pois é um Channel
+                _compartilhamentoEvent.send(CompartilhamentoEvent.Erro("Falha ao deletar avaliação."))
+            }
+        }
+    }
+
+    fun onEditarAvaliacaoClick(medidaId: Int) {
+        viewModelScope.launch {
+            // CORRIGIDO: Usa 'send'
+            _navigationEvent.send(
+                AvaliacaoNavigationEvent.NavigateToEdit(pacienteId = pacienteId, medidaId = medidaId)
+            )
+        }
+    }
+
     private fun calcularResultado(medida: Medidas, paciente: Paciente): AvaliacaoResultado {
-        // ... (Corpo da função inalterado)
         val calculadora = CalculadoraGorduraCorporal()
         val percentualGordura = calculadora.calcularGordura(medida, paciente)
         val peso = medida.peso ?: 0.0
