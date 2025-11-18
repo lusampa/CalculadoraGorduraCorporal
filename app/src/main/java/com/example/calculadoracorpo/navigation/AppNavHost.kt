@@ -38,9 +38,15 @@ object AppRoutes {
     const val HOME = "home"
     const val LISTA_PACIENTES = "listaPacientes"
     const val AVALIACOES = "avaliacoes"
-    const val CADASTRO_PACIENTE = "cadastroPaciente"
 
+    // [MODIFICADO] Rota de Cadastro/Edição Base
     const val ARG_PACIENTE_ID = "pacienteId"
+    const val CADASTRO_PACIENTE_BASE = "cadastroPaciente?$ARG_PACIENTE_ID={$ARG_PACIENTE_ID}"
+
+    // [NOVO] Funções de Navegação para Cadastro e Edição
+    fun cadastroPaciente() = "cadastroPaciente" // Novo Cadastro (sem ID)
+    fun editarPaciente(pacienteId: Int) = "cadastroPaciente?$ARG_PACIENTE_ID=$pacienteId" // Edição (com ID)
+
     const val ARG_AVALIACAO_ID = "avaliacaoId" // Usado para Edição
 
     const val DETALHE_AVALIACOES = "detalheAvaliacoes/{$ARG_PACIENTE_ID}"
@@ -150,17 +156,36 @@ fun AppNavHost() {
                     onPacienteClick = { pacienteId ->
                         navController.navigate(AppRoutes.detalheAvaliacoes(pacienteId))
                     },
-                    onAddPacienteClick = { navController.navigate(AppRoutes.CADASTRO_PACIENTE) },
-                    onEditarPacienteClick = { /* TODO: Implementar edição */ },
+                    // [MODIFICADO] Navega para o Cadastro como "novo"
+                    onAddPacienteClick = { navController.navigate(AppRoutes.cadastroPaciente()) },
+
+                    // [MODIFICADO] Navega para o Cadastro como "edição", passando o ID
+                    onEditarPacienteClick = { pacienteId ->
+                        navController.navigate(AppRoutes.editarPaciente(pacienteId))
+                    },
                     onAdicionarMedidasClick = { pacienteId ->
                         navController.navigate(AppRoutes.entradaMedidas(pacienteId))
                     }
                 )
             }
 
-            // Rota 3: Cadastro de Paciente
-            composable(AppRoutes.CADASTRO_PACIENTE) {
+            // Rota 3: Cadastro/Edição de Paciente
+            composable(
+                // [CORRIGIDO] Rota base que aceita o ID opcional.
+                route = AppRoutes.CADASTRO_PACIENTE_BASE,
+                arguments = listOf(
+                    navArgument(AppRoutes.ARG_PACIENTE_ID) {
+                        type = NavType.IntType
+                        defaultValue = -1 // O -1 serve como indicador de "novo cadastro"
+                        // [REMOVIDO] A linha `nullable = true` para evitar o erro.
+                    }
+                )
+            ) { backStackEntry ->
+                // O ID será -1 (Novo) ou o ID real (Edição)
+                val pacienteId = backStackEntry.arguments?.getInt(AppRoutes.ARG_PACIENTE_ID) ?: -1
+
                 CadastroPacienteScreen(
+                    pacienteId = pacienteId,
                     onPacienteSalvo = { navController.popBackStack() },
                     onVoltarClick = { navController.popBackStack() }
                 )

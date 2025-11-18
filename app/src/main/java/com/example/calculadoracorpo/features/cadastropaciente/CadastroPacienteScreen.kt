@@ -29,27 +29,33 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CadastroPacienteScreen(
+    // [CORREÇÃO] O Composable agora aceita o ID. -1 indica Novo Cadastro.
+    pacienteId: Int,
     onPacienteSalvo: () -> Unit, // Callback para navegar de volta
     onVoltarClick: () -> Unit
 ) {
     // --- 1. Injeção de Dependência Manual ---
     val application = LocalContext.current.applicationContext as MainApplication
     val repository = application.repository
-    val factory = CadastroPacienteViewModelFactory(repository)
+
+    // [MODIFICADO] Passa o ID para a Factory
+    val factory = CadastroPacienteViewModelFactory(repository, pacienteId)
+
     val viewModel: CadastroPacienteViewModel = viewModel(factory = factory)
 
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
     // --- 2. Lógica para o DatePickerDialog ---
+    val dataInicial = uiState.dataNascimento ?: LocalDate.now()
     val datePickerDialog = DatePickerDialog(
         context,
         { _: DatePicker, year: Int, month: Int, dayOfMonth: Int ->
             viewModel.onDataNascimentoChanged(LocalDate.of(year, month + 1, dayOfMonth))
         },
-        LocalDate.now().year,
-        LocalDate.now().monthValue - 1,
-        LocalDate.now().dayOfMonth
+        dataInicial.year,
+        dataInicial.monthValue - 1,
+        dataInicial.dayOfMonth
     )
 
     // --- 3. Efeito para navegar de volta quando salvar ---
@@ -58,6 +64,10 @@ fun CadastroPacienteScreen(
             onPacienteSalvo()
         }
     }
+
+    // [NOVO] Lógica para o título da tela
+    val tituloTela = if (pacienteId > 0) "EDITAR PACIENTE" else "ADICIONAR PACIENTE"
+
 
     val corLabel = Color.White
     val corCampoFundo = Color(0xFFD9D9D9) // Cinza claro
@@ -71,6 +81,11 @@ fun CadastroPacienteScreen(
             horizontalAlignment = Alignment.Start // Alinha tudo à esquerda
         ) {
             Spacer(modifier = Modifier.height(32.dp))
+
+            // [MODIFICADO] Título Dinâmico
+            Text(tituloTela, color = corLabel, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.align(Alignment.CenterHorizontally))
+            Spacer(modifier = Modifier.height(24.dp))
+
 
             // --- Nome do Paciente ---
             Text("Nome do paciente:", color = corLabel, fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -169,27 +184,23 @@ fun CadastroPacienteScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- Altura e Peso ---
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Altura em cm:", color = corLabel, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            }
+            // --- Altura em cm ---
+            Text("Altura em cm:", color = corLabel, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                TextField(
-                    value = uiState.altura,
-                    onValueChange = viewModel::onAlturaChanged,
-                    placeholder = { Text("Informe a altura") },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = corCampoFundo, unfocusedContainerColor = corCampoFundo,
-                        focusedTextColor = corCampoTexto, unfocusedTextColor = corCampoTexto,
-                        focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent
-                    )
+            TextField(
+                value = uiState.altura,
+                onValueChange = viewModel::onAlturaChanged,
+                placeholder = { Text("Informe a altura") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = corCampoFundo, unfocusedContainerColor = corCampoFundo,
+                    focusedTextColor = corCampoTexto, unfocusedTextColor = corCampoTexto,
+                    focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent
                 )
-            }
+            )
 
             Spacer(modifier = Modifier.weight(1f))
 
@@ -208,7 +219,8 @@ fun CadastroPacienteScreen(
                 if (uiState.isLoading) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                 } else {
-                    Text("ADICIONAR PACIENTE", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    // [MODIFICADO] Texto do botão dinâmico
+                    Text(tituloTela, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
 
@@ -216,7 +228,7 @@ fun CadastroPacienteScreen(
             if (uiState.erro != null) {
                 Text(
                     text = uiState.erro!!,
-                    color = MaterialTheme.colorScheme.errorContainer,
+                    color = MaterialTheme.colorScheme.error, // Usar colorScheme.error é mais comum
                     modifier = Modifier.padding(top = 16.dp).align(Alignment.CenterHorizontally)
                 )
             }
