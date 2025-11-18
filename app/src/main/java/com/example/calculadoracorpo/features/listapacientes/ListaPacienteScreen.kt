@@ -230,7 +230,7 @@ fun ItemPaciente(
                         text = { Text("Editar Dados") },
                         onClick = {
                             menuAberto = false
-                            onEditarClick()
+                            onEditarClick() // Chama o callback que passa o ID para a ListaPacienteScreen
                         },
                         leadingIcon = {
                             Icon(Icons.Default.Edit, "Editar")
